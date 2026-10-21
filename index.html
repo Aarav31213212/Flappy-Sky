@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Flappy Sky</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#70d9ff;font-family:system-ui,Arial;touch-action:manipulation}body{display:flex;align-items:center;justify-content:center}#wrap{position:relative;width:min(100vw,56.25vh);height:min(100vh,177.78vw);max-height:100vh;overflow:hidden;background:#70d9ff;box-shadow:0 0 30px #184b6b55}canvas{width:100%;height:100%;display:block}#hint{position:absolute;left:0;right:0;bottom:12%;text-align:center;color:#fff;font-weight:800;font-size:clamp(14px,4vw,20px);text-shadow:0 2px 4px #28637b}#btn{position:absolute;left:50%;top:60%;transform:translate(-50%,-50%);border:0;border-radius:999px;padding:13px 26px;background:#ffcb45;color:#653d14;font-size:18px;font-weight:900;box-shadow:0 5px 0 #d78d28;display:none}#score{position:absolute;top:7%;left:0;right:0;text-align:center;font-size:clamp(38px,12vw,56px);font-weight:1000;color:white;text-shadow:0 3px 0 #4983a0,0 5px 7px #16495b88;pointer-events:none}#sub{position:absolute;top:21%;left:8%;right:8%;text-align:center;color:white;font-weight:800;font-size:18px;text-shadow:0 2px 4px #28637b;display:none}#top{position:absolute;top:10px;left:12px;color:#fff;font-size:12px;font-weight:800;text-shadow:0 1px 3px #28637b}
+</style>
+</head>
+<body><div id="wrap"><canvas id="game" width="360" height="640"></canvas><div id="top">FLAPPY SKY</div><div id="score">0</div><div id="sub"></div><div id="hint">TAP TO FLAP!</div><button id="btn">PLAY AGAIN</button></div>
+<script>
+(()=>{
+const c=document.getElementById('game'),ctx=c.getContext('2d'),scoreEl=document.getElementById('score'),hint=document.getElementById('hint'),btn=document.getElementById('btn'),sub=document.getElementById('sub');
+const W=360,H=640,ground=570;let bird,pipes,score,best=+(localStorage.getItem('flappySkyBest')||0),state='ready',frame=0,clouds=[];
+function reset(){bird={x:94,y:275,vy:0,rot:0};pipes=[];score=0;frame=0;state='ready';scoreEl.textContent='0';hint.style.display='block';hint.textContent='TAP TO FLAP!';btn.style.display='none';sub.style.display='none';}
+for(let i=0;i<6;i++)clouds.push({x:i*85+10,y:50+(i*47)%220,s:.65+(i%3)*.25});
+function flap(){if(state==='over'){reset();state='playing';bird.vy=-6.5;hint.style.display='none';return}if(state==='ready'){state='playing';hint.style.display='none'}if(state==='playing')bird.vy=-6.3}
+function end(){state='over';best=Math.max(best,score);localStorage.setItem('flappySkyBest',best);hint.style.display='none';btn.style.display='block';sub.innerHTML='GAME OVER<br><span style="font-size:15px">Score: '+score+' &nbsp; Best: '+best+'</span>';sub.style.display='block'}
+function pipe(){let gap=154,top=95+Math.random()*260;pipes.push({x:W+20,top,gap,passed:false})}
+function roundRect(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function draw(){ctx.clearRect(0,0,W,H);
+let sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#65d6ff');sky.addColorStop(1,'#d5f8ff');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+// sun
+ctx.fillStyle='#fff5a6';ctx.beginPath();ctx.arc(288,92,34,0,Math.PI*2);ctx.fill();
+// clouds
+clouds.forEach(cl=>{ctx.save();ctx.translate(cl.x,cl.y);ctx.scale(cl.s,cl.s);ctx.fillStyle='#ffffffcc';ctx.beginPath();ctx.arc(0,12,17,0,Math.PI*2);ctx.arc(18,3,22,0,Math.PI*2);ctx.arc(40,13,16,0,Math.PI*2);ctx.fill();ctx.restore()});
+// distant hills
+ctx.fillStyle='#9ee8bd';ctx.beginPath();ctx.moveTo(0,510);ctx.quadraticCurveTo(60,430,130,500);ctx.quadraticCurveTo(230,420,300,490);ctx.lineTo(360,470);ctx.lineTo(360,580);ctx.lineTo(0,580);ctx.fill();
+// pipes
+pipes.forEach(p=>{let bottomY=p.top+p.gap;let grad=ctx.createLinearGradient(p.x,0,p.x+52,0);grad.addColorStop(0,'#2bbd68');grad.addColorStop(.45,'#79ed7c');grad.addColorStop(1,'#168e54');
+ctx.fillStyle=grad;ctx.fillRect(p.x,0,48,p.top);ctx.fillRect(p.x,bottomY,48,ground-bottomY);
+ctx.fillStyle='#15884e';ctx.fillRect(p.x+43,0,5,p.top);ctx.fillRect(p.x+43,bottomY,5,ground-bottomY);
+roundRect(p.x-5,p.top-19,58,20,4,'#42d56f');roundRect(p.x-5,bottomY-1,58,20,4,'#42d56f');
+ctx.fillStyle='#a0f68d';ctx.fillRect(p.x+4,0,5,Math.max(0,p.top-19));ctx.fillRect(p.x+4,bottomY+20,5,ground-bottomY-20);
+});
+// ground
+ctx.fillStyle='#e9c56e';ctx.fillRect(0,ground,W,H-ground);ctx.fillStyle='#78d64f';ctx.fillRect(0,ground,W,15);ctx.fillStyle='#4eaf3b';for(let x=-((frame*2)%24);x<W;x+=24){ctx.beginPath();ctx.moveTo(x,ground+15);ctx.lineTo(x+12,ground+23);ctx.lineTo(x+24,ground+15);ctx.fill()}ctx.fillStyle='#d4a34b';for(let x=0;x<W;x+=32)ctx.fillRect(x,ground+38,16,4);
+// cute little chick character
+ctx.save();ctx.translate(bird.x,bird.y);ctx.rotate(bird.rot);
+// tiny feather tufts
+ctx.fillStyle='#ffcf45';ctx.beginPath();ctx.moveTo(-7,-11);ctx.quadraticCurveTo(-12,-23,-4,-19);ctx.quadraticCurveTo(0,-25,3,-16);ctx.quadraticCurveTo(9,-22,8,-11);ctx.closePath();ctx.fill();
+// soft round body
+ctx.shadowColor='#b87526';ctx.shadowBlur=2;ctx.shadowOffsetY=2;
+const chickGrad=ctx.createRadialGradient(-7,-7,2,0,0,23);chickGrad.addColorStop(0,'#fff4a8');chickGrad.addColorStop(.7,'#ffd34e');chickGrad.addColorStop(1,'#ffad32');
+ctx.fillStyle=chickGrad;ctx.beginPath();ctx.ellipse(0,0,18,16,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ctx.strokeStyle='#e99a28';ctx.lineWidth=1.5;ctx.stroke();
+// tiny fluttering wing
+ctx.fillStyle='#ffb936';ctx.beginPath();ctx.ellipse(-7,5,8,5,Math.sin(frame*.45)*.35,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#efa32c';ctx.stroke();
+// rosy cheeks
+ctx.fillStyle='#ff9998';ctx.globalAlpha=.8;ctx.beginPath();ctx.ellipse(5,4,3.5,2.2,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+// big sparkly eye
+ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(7,-5,6,7,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#493b42';ctx.beginPath();ctx.arc(9,-4,3.2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(10,-5,1.2,0,Math.PI*2);ctx.fill();
+// little orange beak
+ctx.fillStyle='#ff8549';ctx.beginPath();ctx.moveTo(13,-1);ctx.quadraticCurveTo(24,1,14,6);ctx.closePath();ctx.fill();
+// tiny feet
+ctx.strokeStyle='#f18a35';ctx.lineWidth=2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-4,13);ctx.lineTo(-5,16);ctx.moveTo(3,13);ctx.lineTo(4,16);ctx.stroke();
+ctx.restore();
+if(state==='ready'){ctx.fillStyle='#fff';ctx.font='900 29px system-ui';ctx.textAlign='center';ctx.shadowColor='#478ba3';ctx.shadowBlur=3;ctx.fillText('FLAPPY SKY',180,190);ctx.shadowBlur=0}
+}
+function update(){frame++;clouds.forEach(cl=>{cl.x-=.35;if(cl.x<-70)cl.x=W+35});if(state==='playing'){bird.vy+=.34;bird.y+=bird.vy;bird.rot=Math.min(.9,Math.max(-.5,bird.vy*.08));if(frame%92===0)pipe();pipes.forEach(p=>{p.x-=2.55;if(!p.passed&&p.x+48<bird.x){p.passed=true;score++;scoreEl.textContent=score}});pipes=pipes.filter(p=>p.x>-70);
+if(bird.y+12>ground||bird.y-12<0)end();
+for(const p of pipes){let inX=bird.x+14>p.x-4&&bird.x-14<p.x+53;if(inX&&(bird.y-11<p.top||bird.y+11>p.top+p.gap))end()}
+} else if(state==='ready'){bird.y=275+Math.sin(frame*.08)*7;bird.rot=0}
+draw();requestAnimationFrame(update)}
+c.addEventListener('pointerdown',e=>{e.preventDefault();if(state==='over')return;flap()});btn.addEventListener('pointerdown',e=>{e.stopPropagation();reset();flap()});document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(state==='over'){reset();flap()}else flap()}});
+reset();update();
+})();
+</script></body></html>
